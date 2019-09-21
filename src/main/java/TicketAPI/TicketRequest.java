@@ -53,20 +53,29 @@ import javax.net.ssl.TrustManagerFactory;
  * @author Steven Jenkins De Haro
  */
 public class TicketRequest {
-    private static final String XRFKEY = "1234567890123456"; // Xrfkey to prevent cross-site issues.
+    
+    private static final String XRFKEY = "1234567890123456"; // Xrfkey to prevent CSRF attacks.
     private static final String PROTOCOL = "TLS";
-    private final String _host;
-    private final String _vproxy;
+    private final String _hostname;
+    private final String _vpPrefix;
     private final String _clientCertPath; // Client certificate with private key. 
     private final char[] _clientCertPassword;
     private final String _rootCertPath; // Required in this example because Qlik Sense certs are used. 
     
-    public  TicketRequest(String host, Optional<String> virtualProxyPrefix, 
+    /**
+     * Constructions a new {@see TicketRequest} instance to make Ticket requests.
+     * @param hostname Hostname of the Qlik Sense server used for requests.
+     * @param virtualProxyPrefix Optional prefix of virtual proxy if one is used.
+     * @param clientCertPath Path to a PKCS#12 client certificate.
+     * @param clientCertPassword Password for the PKCS#12 certificate.
+     * @param rootCertPath Path to the X.509 root certificate of the client certificate.
+     */
+    public  TicketRequest(String hostname, Optional<String> virtualProxyPrefix, 
                 String clientCertPath, char[] clientCertPassword, 
                 String rootCertPath) {
         
-        _host = host;
-        _vproxy = virtualProxyPrefix.isPresent() ? "/" + virtualProxyPrefix.get() : "";
+        _hostname = hostname;
+        _vpPrefix = virtualProxyPrefix.isPresent() ? "/" + virtualProxyPrefix.get() : "";
         _clientCertPath = clientCertPath;
         _clientCertPassword = clientCertPassword;
         _rootCertPath = rootCertPath;
@@ -102,6 +111,19 @@ public class TicketRequest {
         return context.getSocketFactory();
     }
     
+    /**
+     * Gets a new instance of a {@see KeyStore} in PKCS#12 Format configured with 
+     * standard certificates that are loaded from a file.
+     * @param certPath Path to a PKCS#12 certificate or to a X.509 public key only certificate.
+     * @param certPassword Password for the PKCS#12 certificate.
+     * @param isClientCheck Set true if KeyStore is used for client check, and false if not.
+     * @return A new KeyStore instance configured with standard certificates.
+     * @throws KeyStoreException
+     * @throws FileNotFoundException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     * @throws CertificateException 
+     */
     private KeyStore getKeyStore(String certPath, char[] certPassword, boolean isClientCheck) 
             throws KeyStoreException, FileNotFoundException, IOException, 
                 NoSuchAlgorithmException, CertificateException {  
@@ -122,21 +144,36 @@ public class TicketRequest {
         return ks;
     } 
     
+    /**
+     * Requests a ticket from the Qlik Sense Proxy Service that is valid for one minute.
+     * @param userDirectory Directory associated with user.
+     * @param userId Login name of user.
+     * @return Ticket to claim within one minute.
+     * @throws MalformedURLException
+     * @throws IOException
+     * @throws KeyStoreException
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws UnrecoverableKeyException
+     * @throws KeyManagementException 
+     */
     public String getTicket(String userDirectory, String userId) 
             throws MalformedURLException, IOException, KeyStoreException, 
                 CertificateException, NoSuchAlgorithmException, 
                 UnrecoverableKeyException, KeyManagementException {
         
-        var apiUrl = String.format("https://%1$s:4243/qps%2$s/ticket?xrfkey=%3$s", _host, _vproxy, XRFKEY);
+        var apiUrl = String.format("https://%1$s:4243/qps%2$s/ticket?xrfkey=%3$s", _hostname, _vpPrefix, XRFKEY);
         var jsonRequestBody = String.format("{ 'UserId':'%1$s','UserDirectory':'%2$s','Attributes': [] }",
                 userId, userDirectory);
         var url = new URL(apiUrl);
         var connection = (HttpsURLConnection) url.openConnection();
         
-        // When target hostname is not listed in server's certificate SAN field,
-        // use this as a whitelist for exceptions to continue. For example,
-        // hostname.equals("xx.xx.xx.xx" or "localhost") ? true : false
-        // See https://support.qlik.com/articles/000078616 for more info.
+        /*
+         * When target hostname is not listed in server's certificate SAN field,
+         * use this as a whitelist for exceptions to continue. For example,
+         * hostname.equals("xx.xx.xx.xx" or "localhost") ? true : false
+         * See https://support.qlik.com/articles/000078616 for more info.
+         */
         HttpsURLConnection.setDefaultHostnameVerifier((String hostname, SSLSession session) -> true);
         
         connection.setSSLSocketFactory(getSSLSocketFactory());
