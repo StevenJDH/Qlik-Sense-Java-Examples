@@ -28,6 +28,9 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -43,12 +46,15 @@ public class TicketRequestDemo extends javax.swing.JFrame {
 
     private static final String DEFAULT_CERT_DIRECTORY = Paths.get(System.getenv("programdata"), 
                 "Qlik", "Sense", "Repository", "Exported Certificates").toString();
+    private ScheduledExecutorService executorService;
+    private static int expireCountdown = 60;
     
     /**
      * Creates new form TicketRequestDemo
      */
     public TicketRequestDemo() {
         initComponents();
+        executorService = null;
     }
 
     /**
@@ -63,16 +69,16 @@ public class TicketRequestDemo extends javax.swing.JFrame {
         txtUserId = new javax.swing.JTextField();
         jLabel8 = new javax.swing.JLabel();
         txtDirectory = new javax.swing.JTextField();
-        txtRootCertificatePath = new javax.swing.JTextField();
-        jLabel5 = new javax.swing.JLabel();
+        txtRootCertPath = new javax.swing.JTextField();
+        lblTicket = new javax.swing.JLabel();
         btnRootBrowse = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         txtTicket = new javax.swing.JTextArea();
-        txtHost = new javax.swing.JTextField();
+        txtHostname = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
-        txtClientCertificatePath = new javax.swing.JTextField();
+        txtClientCertPath = new javax.swing.JTextField();
         txtVirtualProxy = new javax.swing.JTextField();
         btnClientBrowse = new javax.swing.JButton();
         btnRequest = new javax.swing.JButton();
@@ -84,6 +90,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Ticket Request Demo");
+        setResizable(false);
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowOpened(java.awt.event.WindowEvent evt) {
                 formWindowOpened(evt);
@@ -96,7 +103,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
 
         txtDirectory.setText("domain");
 
-        jLabel5.setText("Ticket:");
+        lblTicket.setText("Ticket:");
 
         btnRootBrowse.setText("...");
         btnRootBrowse.addActionListener(new java.awt.event.ActionListener() {
@@ -112,9 +119,9 @@ public class TicketRequestDemo extends javax.swing.JFrame {
         txtTicket.setRows(5);
         jScrollPane1.setViewportView(txtTicket);
 
-        txtHost.setText("qlikserver1.domain.local");
+        txtHostname.setText("qlikserver1.domain.local");
 
-        jLabel1.setText("Host:");
+        jLabel1.setText("Hostname:");
 
         jLabel6.setText("Client Certificate (*.pfx):");
 
@@ -149,31 +156,27 @@ public class TicketRequestDemo extends javax.swing.JFrame {
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 277, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(121, 121, 121)
-                        .addComponent(btnRequest, javax.swing.GroupLayout.PREFERRED_SIZE, 156, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(107, 107, 107))
-                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(txtClientPassword)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                .addComponent(txtClientCertificatePath)
+                                .addComponent(txtClientCertPath)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(btnClientBrowse, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(layout.createSequentialGroup()
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                                     .addComponent(jLabel8, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(txtRootCertificatePath))
+                                    .addComponent(txtRootCertPath))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(btnRootBrowse, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(lblTicket, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(jScrollPane1)
                             .addGroup(layout.createSequentialGroup()
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(txtHost)
+                                    .addComponent(txtHostname)
                                     .addComponent(txtDirectory)
                                     .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 183, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -182,12 +185,15 @@ public class TicketRequestDemo extends javax.swing.JFrame {
                                     .addComponent(txtVirtualProxy)
                                     .addComponent(txtUserId)
                                     .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 183, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addContainerGap())))
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 183, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap())
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(btnRequest, javax.swing.GroupLayout.PREFERRED_SIZE, 156, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(116, 116, 116))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -196,7 +202,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
                 .addComponent(jLabel6)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtClientCertificatePath, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtClientCertPath, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnClientBrowse))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel7)
@@ -206,7 +212,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
                 .addComponent(jLabel8)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtRootCertificatePath, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtRootCertPath, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnRootBrowse))
                 .addGap(45, 45, 45)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -219,7 +225,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(txtHost, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(txtHostname, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
@@ -231,7 +237,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(txtDirectory, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel5)
+                .addComponent(lblTicket)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -251,7 +257,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
 
         if(fc.showOpenDialog(this) == JOptionPane.OK_OPTION)
         {
-            txtRootCertificatePath.setText(fc.getSelectedFile().getPath());
+            txtRootCertPath.setText(fc.getSelectedFile().getPath());
         }
     }//GEN-LAST:event_btnRootBrowseActionPerformed
 
@@ -263,46 +269,67 @@ public class TicketRequestDemo extends javax.swing.JFrame {
 
         if(fc.showOpenDialog(this) == JOptionPane.OK_OPTION)
         {
-            txtClientCertificatePath.setText(fc.getSelectedFile().getPath());
+            txtClientCertPath.setText(fc.getSelectedFile().getPath());
         }
     }//GEN-LAST:event_btnClientBrowseActionPerformed
 
     private void btnRequestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRequestActionPerformed
         char[] clientPass = txtClientPassword.getPassword();
-
-        var request = new TicketRequest(txtHost.getText(),
+        var request = new TicketRequest(txtHostname.getText(),
             txtVirtualProxy.getText().trim().equals("") ?
-            Optional.empty() :
-            Optional.of(txtVirtualProxy.getText().trim()),
-            txtClientCertificatePath.getText(), clientPass,
-            txtRootCertificatePath.getText());
+                    Optional.empty() :
+                    Optional.of(txtVirtualProxy.getText().trim()),
+            txtClientCertPath.getText(), clientPass,
+            txtRootCertPath.getText());
+        
+        // Avoids requesting a new ticket while there is one that is not expired.
+        if (null != executorService && !executorService.isTerminated()) {
+            return;
+        }
+        
         try {
             String json = request.getTicket(txtDirectory.getText(), txtUserId.getText());
-
+            
             // Lazy way to parse JSON, use regex or proper deserialization instead.
             if (json.contains("Ticket")) {
                 int start = json.indexOf("Ticket\":\"");
                 int end = json.substring(start).indexOf("\",");
                 txtTicket.setText(json.substring(start + 9, start + end));
+                displayTicketExpiration();
             } else  {
+                lblTicket.setText("Ticket:");
                 txtTicket.setText("Unable to request ticket.");
             }
-        }catch (KeyStoreException | IOException | CertificateException |
+        } catch (KeyStoreException | IOException | CertificateException |
             NoSuchAlgorithmException | UnrecoverableKeyException |
             KeyManagementException ex) {
 
+            lblTicket.setText("Ticket:");
             txtTicket.setText(ex.getMessage().equals("") ?
                 "An error occured while processing the ticket request." :
                 ex.getMessage());
         }
-
+        
         // Zeros out the password while avoiding the Java String Pool for security.
         Arrays.fill(clientPass, '0');
     }//GEN-LAST:event_btnRequestActionPerformed
-
+    
+    private void displayTicketExpiration() {
+        executorService = Executors.newSingleThreadScheduledExecutor();
+        executorService.scheduleWithFixedDelay(()-> {
+            if (0 == --expireCountdown) {
+                expireCountdown = 60;
+                lblTicket.setText("Ticket expired:");
+                executorService.shutdown();
+            } else {
+                lblTicket.setText(String.format("Ticket expires in %d seconds:", expireCountdown));
+            }
+        }, 0, 1000L, TimeUnit.MILLISECONDS);
+    }
+    
     private void formWindowOpened(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowOpened
-        txtClientCertificatePath.setEditable(false);
-        txtRootCertificatePath.setEditable(false);
+        txtClientCertPath.setEditable(false);
+        txtRootCertPath.setEditable(false);
     }//GEN-LAST:event_formWindowOpened
 
     /**
@@ -346,17 +373,17 @@ public class TicketRequestDemo extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JSeparator jSeparator1;
-    private javax.swing.JTextField txtClientCertificatePath;
+    private javax.swing.JLabel lblTicket;
+    private javax.swing.JTextField txtClientCertPath;
     private javax.swing.JPasswordField txtClientPassword;
     private javax.swing.JTextField txtDirectory;
-    private javax.swing.JTextField txtHost;
-    private javax.swing.JTextField txtRootCertificatePath;
+    private javax.swing.JTextField txtHostname;
+    private javax.swing.JTextField txtRootCertPath;
     private javax.swing.JTextArea txtTicket;
     private javax.swing.JTextField txtUserId;
     private javax.swing.JTextField txtVirtualProxy;

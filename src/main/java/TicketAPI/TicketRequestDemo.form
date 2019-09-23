@@ -4,6 +4,7 @@
   <Properties>
     <Property name="defaultCloseOperation" type="int" value="3"/>
     <Property name="title" type="java.lang.String" value="Ticket Request Demo"/>
+    <Property name="resizable" type="boolean" value="false"/>
   </Properties>
   <SyntheticProperties>
     <SyntheticProperty name="formSizePolicy" type="int" value="0"/>
@@ -33,36 +34,31 @@
               <Component id="jSeparator1" min="-2" pref="277" max="-2" attributes="0"/>
               <EmptySpace max="32767" attributes="0"/>
           </Group>
-          <Group type="102" alignment="0" attributes="0">
-              <EmptySpace max="-2" attributes="0"/>
+          <Group type="102" attributes="0">
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
-                      <EmptySpace min="-2" pref="121" max="-2" attributes="0"/>
-                      <Component id="btnRequest" min="-2" pref="156" max="-2" attributes="0"/>
-                      <EmptySpace min="-2" pref="107" max="-2" attributes="0"/>
-                  </Group>
-                  <Group type="102" alignment="0" attributes="0">
+                      <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Component id="jLabel7" alignment="0" max="32767" attributes="0"/>
                           <Component id="txtClientPassword" alignment="0" max="32767" attributes="0"/>
                           <Group type="102" alignment="1" attributes="0">
-                              <Component id="txtClientCertificatePath" max="32767" attributes="0"/>
+                              <Component id="txtClientCertPath" max="32767" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
                               <Component id="btnClientBrowse" min="-2" pref="78" max="-2" attributes="0"/>
                           </Group>
                           <Group type="102" alignment="0" attributes="0">
                               <Group type="103" groupAlignment="1" attributes="0">
                                   <Component id="jLabel8" alignment="0" max="32767" attributes="0"/>
-                                  <Component id="txtRootCertificatePath" alignment="1" max="32767" attributes="0"/>
+                                  <Component id="txtRootCertPath" alignment="1" max="32767" attributes="0"/>
                               </Group>
                               <EmptySpace max="-2" attributes="0"/>
                               <Component id="btnRootBrowse" min="-2" pref="78" max="-2" attributes="0"/>
                           </Group>
-                          <Component id="jLabel5" alignment="0" max="32767" attributes="0"/>
+                          <Component id="lblTicket" alignment="0" max="32767" attributes="0"/>
                           <Component id="jScrollPane1" alignment="0" max="32767" attributes="0"/>
                           <Group type="102" alignment="0" attributes="0">
                               <Group type="103" groupAlignment="0" max="-2" attributes="0">
-                                  <Component id="txtHost" alignment="0" max="32767" attributes="0"/>
+                                  <Component id="txtHostname" alignment="0" max="32767" attributes="0"/>
                                   <Component id="txtDirectory" alignment="0" max="32767" attributes="0"/>
                                   <Component id="jLabel1" alignment="0" max="32767" attributes="0"/>
                                   <Component id="jLabel4" alignment="0" min="-2" pref="183" max="-2" attributes="0"/>
@@ -76,14 +72,18 @@
                               </Group>
                           </Group>
                       </Group>
+                  </Group>
+                  <Group type="102" alignment="0" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
+                      <Component id="jLabel6" max="32767" attributes="0"/>
                   </Group>
               </Group>
+              <EmptySpace max="-2" attributes="0"/>
           </Group>
-          <Group type="102" alignment="0" attributes="0">
-              <EmptySpace max="-2" attributes="0"/>
-              <Component id="jLabel6" max="32767" attributes="0"/>
-              <EmptySpace max="-2" attributes="0"/>
+          <Group type="102" alignment="1" attributes="0">
+              <EmptySpace max="32767" attributes="0"/>
+              <Component id="btnRequest" min="-2" pref="156" max="-2" attributes="0"/>
+              <EmptySpace min="-2" pref="116" max="-2" attributes="0"/>
           </Group>
       </Group>
     </DimensionLayout>
@@ -94,7 +94,7 @@
               <Component id="jLabel6" min="-2" max="-2" attributes="0"/>
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="3" attributes="0">
-                  <Component id="txtClientCertificatePath" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="txtClientCertPath" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="btnClientBrowse" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
@@ -105,7 +105,7 @@
               <Component id="jLabel8" min="-2" max="-2" attributes="0"/>
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="3" attributes="0">
-                  <Component id="txtRootCertificatePath" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="txtRootCertPath" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="btnRootBrowse" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace min="-2" pref="45" max="-2" attributes="0"/>
@@ -120,7 +120,7 @@
                   <Group type="102" alignment="0" attributes="0">
                       <Component id="jLabel1" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
-                      <Component id="txtHost" min="-2" max="-2" attributes="0"/>
+                      <Component id="txtHostname" min="-2" max="-2" attributes="0"/>
                   </Group>
               </Group>
               <EmptySpace type="separate" max="-2" attributes="0"/>
@@ -137,7 +137,7 @@
                   </Group>
               </Group>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
-              <Component id="jLabel5" min="-2" max="-2" attributes="0"/>
+              <Component id="lblTicket" min="-2" max="-2" attributes="0"/>
               <EmptySpace max="-2" attributes="0"/>
               <Component id="jScrollPane1" min="-2" max="-2" attributes="0"/>
               <EmptySpace max="-2" attributes="0"/>
@@ -163,9 +163,9 @@
         <Property name="text" type="java.lang.String" value="domain"/>
       </Properties>
     </Component>
-    <Component class="javax.swing.JTextField" name="txtRootCertificatePath">
+    <Component class="javax.swing.JTextField" name="txtRootCertPath">
     </Component>
-    <Component class="javax.swing.JLabel" name="jLabel5">
+    <Component class="javax.swing.JLabel" name="lblTicket">
       <Properties>
         <Property name="text" type="java.lang.String" value="Ticket:"/>
       </Properties>
@@ -200,14 +200,14 @@
         </Component>
       </SubComponents>
     </Container>
-    <Component class="javax.swing.JTextField" name="txtHost">
+    <Component class="javax.swing.JTextField" name="txtHostname">
       <Properties>
         <Property name="text" type="java.lang.String" value="qlikserver1.domain.local"/>
       </Properties>
     </Component>
     <Component class="javax.swing.JLabel" name="jLabel1">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Host:"/>
+        <Property name="text" type="java.lang.String" value="Hostname:"/>
       </Properties>
     </Component>
     <Component class="javax.swing.JLabel" name="jLabel6">
@@ -220,7 +220,7 @@
         <Property name="text" type="java.lang.String" value="Virtual Proxy Prefix:"/>
       </Properties>
     </Component>
-    <Component class="javax.swing.JTextField" name="txtClientCertificatePath">
+    <Component class="javax.swing.JTextField" name="txtClientCertPath">
     </Component>
     <Component class="javax.swing.JTextField" name="txtVirtualProxy">
     </Component>
