@@ -1,10 +1,28 @@
-# Reference: https://github.com/github/gitignore
+# References: 
+# https://github.com/github/gitignore
+# https://www.gitignore.io/?templates=java,maven,netbeans
 
 ######################
-######## Mine ########
+######   Mine   ######
 ######################
 
 [Rr]esources/
+
+######################
+###### NetBeans ######
+######################
+
+**/nbproject/private/
+**/nbproject/Makefile-*.mk
+**/nbproject/Package-*.bash
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+nbactions.xml
+# nb-configuration.xml
 
 ######################
 ######   Java   ######
@@ -47,7 +65,7 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
+.flattened-pom.xml
 
 # Avoid ignoring Maven wrapper jar file (.jar files are usually ignored)
 !/.mvn/wrapper/maven-wrapper.jar
-
