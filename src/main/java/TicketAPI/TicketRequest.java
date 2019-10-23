@@ -25,7 +25,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Redirect;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -35,12 +40,14 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.Optional;
+import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 /**
@@ -49,15 +56,14 @@ import javax.net.ssl.TrustManagerFactory;
  * standard certificates exported from Qlik Sense without needing to convert them to
  * Java KeyStore (*.jks) certificates.
  * 
- * @version 1.0
+ * @version 1.1
  * @author Steven Jenkins De Haro
  */
 public class TicketRequest {
     
     private static final String XRFKEY = "1234567890123456"; // Xrfkey to prevent CSRF attacks.
     private static final String PROTOCOL = "TLS";
-    private final String _hostname;
-    private final String _vpPrefix;
+    private final String _apiUrl;
     private final String _clientCertPath; // Client certificate with private key. 
     private final char[] _clientCertPassword;
     private final String _rootCertPath; // Required in this example because Qlik Sense certs are used. 
@@ -74,8 +80,8 @@ public class TicketRequest {
                 String clientCertPath, char[] clientCertPassword, 
                 String rootCertPath) {
         
-        _hostname = hostname;
-        _vpPrefix = virtualProxyPrefix.isPresent() ? "/" + virtualProxyPrefix.get() : "";
+        _apiUrl = String.format("https://%1$s:4243/qps%2$s/ticket?xrfkey=%3$s", 
+                hostname, virtualProxyPrefix.isPresent() ? "/" + virtualProxyPrefix.get() : "", XRFKEY);
         _clientCertPath = clientCertPath;
         _clientCertPassword = clientCertPassword;
         _rootCertPath = rootCertPath;
@@ -85,7 +91,7 @@ public class TicketRequest {
      * Configures the needed certificates to validate the identity of the HTTPS 
      * server against a list of trusted certificates and to authenticate to the 
      * HTTPS server using a private key. 
-     * @return A layered socket factory for TLS/SSL connections.
+     * @return An initialized secure socket context for TLS/SSL connections.
      * @throws KeyStoreException
      * @throws IOException
      * @throws CertificateException
@@ -93,7 +99,7 @@ public class TicketRequest {
      * @throws UnrecoverableKeyException
      * @throws KeyManagementException 
      */
-    private SSLSocketFactory getSSLSocketFactory() 
+    private SSLContext getSSLContext() 
             throws KeyStoreException, IOException, CertificateException, 
                 NoSuchAlgorithmException, UnrecoverableKeyException, 
                 KeyManagementException {
@@ -108,7 +114,7 @@ public class TicketRequest {
         tmf.init(trustStore);
         context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
 
-        return context.getSocketFactory();
+        return context;
     }
     
     /**
@@ -162,21 +168,20 @@ public class TicketRequest {
                 CertificateException, NoSuchAlgorithmException, 
                 UnrecoverableKeyException, KeyManagementException {
         
-        var apiUrl = String.format("https://%1$s:4243/qps%2$s/ticket?xrfkey=%3$s", _hostname, _vpPrefix, XRFKEY);
         var jsonRequestBody = String.format("{ 'UserId':'%1$s','UserDirectory':'%2$s','Attributes': [] }",
                 userId, userDirectory);
-        var url = new URL(apiUrl);
+        var url = new URL(_apiUrl);
         var connection = (HttpsURLConnection) url.openConnection();
-        
+
         /*
-         * When target hostname is not listed in server's certificate SAN field,
-         * use this as a whitelist for exceptions to continue. For example,
-         * hostname.equals("xx.xx.xx.xx" or "localhost") ? true : false
-         * See https://support.qlik.com/articles/000078616 for more info.
+           * When target hostname is not listed in server's certificate SAN field,
+           * use this as a whitelist for exceptions to continue. For example,
+           * hostname.equals("xx.xx.xx.xx" or "localhost") ? true : false
+           * See https://support.qlik.com/articles/000078616 for more info.
          */
         HttpsURLConnection.setDefaultHostnameVerifier((String hostname, SSLSession session) -> true);
-        
-        connection.setSSLSocketFactory(getSSLSocketFactory());
+
+        connection.setSSLSocketFactory(getSSLContext().getSocketFactory());
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setConnectTimeout(30000);
@@ -192,15 +197,62 @@ public class TicketRequest {
         }
 
         var sb = new StringBuilder();
-        
+
         // Gets the response from the QPS BufferedReader.
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {        
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
                 sb.append(inputLine);
             }
         }
-        
+
         return sb.toString();
-    } 
+    }
+    
+    /**
+     * Requests a ticket asynchronously from the Qlik Sense Proxy Service that is valid for one minute.Note: This function uses a more modern API than the {@link #getTicket(String, String) getTicket} function.
+     * @param userDirectory Directory associated with user.
+     * @param userId Login name of user.
+     * @return CompletableFuture with Ticket to claim within one minute.
+     * @throws MalformedURLException
+     * @throws IOException
+     * @throws KeyStoreException
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws UnrecoverableKeyException
+     * @throws KeyManagementException 
+     */
+    public CompletableFuture<String> getTicketAsync(String userDirectory, String userId) 
+            throws MalformedURLException, IOException, KeyStoreException, 
+                CertificateException, NoSuchAlgorithmException, 
+                UnrecoverableKeyException, KeyManagementException {
+        
+        var jsonRequestBody = String.format("{ 'UserId':'%1$s','UserDirectory':'%2$s','Attributes': [] }",
+                userId, userDirectory);
+        final Properties props = System.getProperties();
+        
+        /*
+         * Disables hostname validation when hostname is not listed in server's  
+         * certificate SAN field.
+         */    
+        props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
+
+        var client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .followRedirects(Redirect.NORMAL)
+            .sslContext(getSSLContext())
+            .build();
+        
+        var request = HttpRequest.newBuilder()
+            .uri(URI.create(_apiUrl))
+            .timeout(Duration.ofSeconds(30))
+            .header("X-Qlik-xrfkey", XRFKEY)
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonRequestBody))
+            .build();
+        
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> response.body());
+    }
 }
