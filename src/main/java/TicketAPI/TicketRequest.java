@@ -210,7 +210,9 @@ public class TicketRequest {
     }
     
     /**
-     * Requests a ticket asynchronously from the Qlik Sense Proxy Service that is valid for one minute.Note: This function uses a more modern API than the {@link #getTicket(String, String) getTicket} function.
+     * Requests a ticket asynchronously from the Qlik Sense Proxy Service that 
+     * is valid for one minute. Note: This function uses a more modern API than 
+     * the {@link #getTicket(String, String) getTicket} function.
      * @param userDirectory Directory associated with user.
      * @param userId Login name of user.
      * @return CompletableFuture with Ticket to claim within one minute.
