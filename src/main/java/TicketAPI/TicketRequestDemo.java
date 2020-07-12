@@ -1,6 +1,6 @@
 /**
  * This file is part of Qlik Sense Java Examples <https://github.com/StevenJDH/Qlik-Sense-Java-Examples>.
- * Copyright (C) 2019 Steven Jenkins De Haro.
+ * Copyright (C) 2019-2020 Steven Jenkins De Haro.
  *
  * Qlik Sense Java Examples is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 package TicketAPI;
 
+import Shared.QlikAuthCertificate;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -40,7 +41,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  * TicketRequestDemo.java (UTF-8)
  * A GUI demo that can request tickets using certificates exported from Qlik Sense.
  * 
- * @version 1.1
+ * @version 1.2
  * @author Steven Jenkins De Haro
  */
 public class TicketRequestDemo extends javax.swing.JFrame {
@@ -89,7 +90,7 @@ public class TicketRequestDemo extends javax.swing.JFrame {
         jLabel4 = new javax.swing.JLabel();
         jSeparator1 = new javax.swing.JSeparator();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Ticket Request Demo");
         setResizable(false);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -272,12 +273,13 @@ public class TicketRequestDemo extends javax.swing.JFrame {
 
     private void btnRequestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRequestActionPerformed
         char[] clientPass = txtClientPassword.getPassword();
+        var cert = new QlikAuthCertificate(txtClientCertPath.getText(), clientPass,
+                txtRootCertPath.getText());
         var request = new TicketRequest(txtHostname.getText(),
             txtVirtualProxy.getText().trim().equals("") ?
                     Optional.empty() :
                     Optional.of(txtVirtualProxy.getText().trim()),
-            txtClientCertPath.getText(), clientPass,
-            txtRootCertPath.getText());
+            cert);
         
         // Avoids requesting a new ticket while there is one that is not expired.
         if (null != executorService && !executorService.isTerminated()) {
